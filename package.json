@@ -1,0 +1,67 @@
+{
+  "name": "@otwa/mcp-server",
+  "version": "0.2.0",
+  "description": "Official Model Context Protocol server for otwa.cloud — provision and manage servers from Claude Code, Claude Desktop, Cursor, Windsurf, VS Code, Zed, Continue, OpenCode and other MCP-capable AI tools.",
+  "license": "MIT",
+  "homepage": "https://otwa.cloud/docs/integrations/mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otwacloud/mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/otwacloud/mcp-server/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "otwa",
+    "otwa.cloud",
+    "vps",
+    "cloud",
+    "claude",
+    "cursor",
+    "ai"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-server": "dist/index.js",
+    "mcp-server-http": "dist/http/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:http": "tsx watch src/http/index.ts",
+    "start": "node dist/index.js",
+    "start:http": "node dist/http/index.js",
+    "build": "tsc -p tsconfig.json",
+    "type-check": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.test.json && vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "express": "^4.21.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.0"
+  }
+}
