@@ -1,0 +1,32 @@
+name: ci
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm run type-check
+      - run: pnpm run test
+      - run: pnpm run build
+      - name: verify bin shebangs preserved
+        run: |
+          head -1 dist/index.js | grep -q '^#!/usr/bin/env node' || { echo "stdio bin missing shebang"; exit 1; }
+          head -1 dist/http/index.js | grep -q '^#!/usr/bin/env node' || { echo "http bin missing shebang"; exit 1; }
+      - name: verify pack succeeds
+        run: pnpm pack --pack-destination /tmp

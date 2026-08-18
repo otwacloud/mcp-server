@@ -1,0 +1,37 @@
+name: publish
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm run test
+      - run: pnpm run build
+      # Idempotent publish: if this exact version is already on npm (e.g. it was
+      # published manually before the tag was pushed), skip cleanly instead of
+      # failing the run with a 403 "cannot publish over existing version" — that
+      # 403 is what spammed the maintainer with "All jobs have failed" emails.
+      - name: Publish to npm (skip if version already exists)
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION is already on npm — skipping publish."
+            exit 0
+          fi
+          pnpm publish --no-git-checks --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
