@@ -1,0 +1,49 @@
+name: publish
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Releases can be held for a manual approval: add required reviewers to the
+    # "npm" environment in the repo settings (and name it on npmjs.com).
+    environment: npm
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: '10.34.9'
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test
+      - run: pnpm run build
+      # Idempotent publish: if this exact version is already on npm (e.g. it was
+      # published manually before the tag was pushed), skip cleanly instead of
+      # failing the run with a 403 "cannot publish over existing version" — that
+      # 403 is what spammed the maintainer with "All jobs have failed" emails.
+      - name: Publish to npm (skip if version already exists)
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION is already on npm — skipping publish."
+            exit 0
+          fi
+          # npm >= 11.5.1 publishes through npm Trusted Publishing (GitHub OIDC,
+          # no token to expire) when the package has this repo + publish.yml set
+          # as its trusted publisher on npmjs.com, and falls back to NPM_TOKEN
+          # otherwise. The npm 10 that ships with Node 22 knows only tokens —
+          # which is how a 90-day token silently ended releases on 2026-11-16.
+          npm install -g npm@11.21.2 >/dev/null
+          if ! npm publish --provenance --access public; then
+            echo "::error::npm publish failed. E401/E403/E404 = no valid credential: set this repo as the package's Trusted Publisher on npmjs.com (Settings → Trusted publishing → GitHub Actions, workflow publish.yml), or put a fresh token in the NPM_TOKEN secret, then re-run this job."
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
